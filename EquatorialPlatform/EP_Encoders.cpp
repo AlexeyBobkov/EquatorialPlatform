@@ -9,6 +9,7 @@
 
 #include "EP_Encoders.h"
 #include "EP_Configuration.h"
+#include "EP_Storage.h"
 
 // if defined, both A and B generate interrupts, otherwise B only.
 #define A_AND_B_INTERRUPTS
@@ -52,15 +53,20 @@
 #define ALT_B_SET       (1<<(ALT_B_IPIN-ALT_PIN_OFFSET))
 #define ALT_AB_SET      ((1<<(ALT_A_IPIN-ALT_PIN_OFFSET))|(1<<(ALT_B_IPIN-ALT_PIN_OFFSET)))
 
-#define RES             (1800*4)    // resolution of encoders
+long ALT_res = 1800*4, AZ_res = 1800*4;  // resolution of encoders
+long ALT_pos, AZ_pos;                   // encoder positions
 
-long ALT_pos = RES/2;   // initial position of encoders is
-long AZ_pos = RES/2;    // half their resolution
 static uint8_t errors = 0;
 
 ///////////////////////////////////////////////////////////////////////////////////////
 void EP_EncodersSetup()
 {
+    ALT_res = EP_ReadDefEncResolutionAlt();
+    AZ_res = EP_ReadDefEncResolutionAzm();
+
+    ALT_pos = ALT_res/2;
+    AZ_pos = AZ_res/2;
+
     // initialize the encoder inputs
     pinMode(ALT_A_IPIN, INPUT);
     pinMode(ALT_B_IPIN, INPUT);
@@ -90,12 +96,30 @@ void EP_EncodersSetup()
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////
-long EP_GetAzEncoderResolution()   {return RES;}
-long EP_GetAltEncoderResolution()  {return RES;}
+long EP_GetAzEncoderResolution()   {return AZ_res;}
+long EP_GetAltEncoderResolution()  {return ALT_res;}
 
 ///////////////////////////////////////////////////////////////////////////////////////
 long EP_GetAzEncoderPosition()      {return AZ_pos;}
 long EP_GetAltEncoderPosition()     {return ALT_pos;}
+
+///////////////////////////////////////////////////////////////////////////////////////
+void EP_SetAzEncoderResolution(long lAz)
+{
+    if(AZ_res != lAz)
+    {
+        AZ_res = lAz;
+        AZ_pos = AZ_res/2;
+    }
+}
+void EP_SetAltEncoderResolution(long lAlt)
+{
+    if(ALT_res != lAlt)
+    {
+        ALT_res = lAlt;
+        ALT_pos = ALT_res/2;
+    }
+}
 
 ///////////////////////////////////////////////////////////////////////////////////////
 uint8_t EP_GetEncoderErrorCount()
@@ -115,12 +139,12 @@ ISR(AZ_PCINT_vect)
     {
         AZ_pos -= 2;
         if (AZ_pos < 0)
-            AZ_pos = RES - 2;
+            AZ_pos = AZ_res - 2;
     }
     else
     {
         AZ_pos += 2;
-        if (AZ_pos >= RES)
+        if (AZ_pos >= AZ_res)
             AZ_pos = 0;
     }
 }
@@ -131,12 +155,12 @@ ISR(ALT_PCINT_vect)
     {
         ALT_pos -= 2;
         if (ALT_pos < 0)
-            ALT_pos = RES - 2;
+            ALT_pos = ALT_res - 2;
     }
     else
     {
         ALT_pos += 2;
-        if (ALT_pos >= RES)
+        if (ALT_pos >= ALT_res)
             ALT_pos = 0;
     }
 }
@@ -167,7 +191,7 @@ static FN_STATE fnAZState = AZState00_Fwd, fnALTState = ALTState00_Fwd;
 
 ///////////////////////////////////////////////////////////////////////////////////////
 #define INC_1(enc,s)                        \
-        if (enc##_pos == RES - 1)           \
+        if (enc##_pos == enc##_res - 1)     \
             enc##_pos = 0;                  \
         else                                \
             ++enc##_pos;                    \
@@ -175,21 +199,21 @@ static FN_STATE fnAZState = AZState00_Fwd, fnALTState = ALTState00_Fwd;
 
 #define DEC_1(enc,s)                        \
         if (!enc##_pos)                     \
-            enc##_pos = RES - 1;            \
+            enc##_pos = enc##_res - 1;      \
         else                                \
             --enc##_pos;                    \
         fn##enc##State = enc##State##s##_Bck;
 
 #define INC_2(enc,s)                        \
         ++errors;                           \
-        if ((enc##_pos += 2) >= RES)        \
-            enc##_pos -= RES;               \
+        if ((enc##_pos += 2) >= enc##_res)  \
+            enc##_pos -= enc##_res;         \
         fn##enc##State = enc##State##s##_Fwd;
 
 #define DEC_2(enc,s)                        \
         ++errors;                           \
         if ((enc##_pos -= 2) < 0)           \
-            enc##_pos += RES;               \
+            enc##_pos += enc##_res;         \
         fn##enc##State = enc##State##s##_Bck;
 
 ///////////////////////////////////////////////////////////////////////////////////////

@@ -481,16 +481,69 @@ static void ReportCapabilities()
     Serial.write(capabilities);
 }
 
+static bool SetSessionResolution(byte buf[], int, int)
+{
+    EP_SetAltEncoderResolution  (buf[0] + ((long)buf[1]) * 256);
+    EP_SetAzEncoderResolution   (buf[2] + ((long)buf[3]) * 256);
+    Serial.print("r");
+}
+
+static bool SetDefaultResolution(byte buf[], int, int)
+{
+    long lAlt = long(buf[0]) + long(buf[1]) * 256;
+    long lAzm = long(buf[2]) + long(buf[3]) * 256;
+
+    EP_WriteDefEncResolutionAlt (lAlt);
+    EP_WriteDefEncResolutionAzm (lAzm);
+
+    EP_SetAltEncoderResolution  (lAlt);
+    EP_SetAzEncoderResolution   (lAzm);
+
+    Serial.print("r");
+}
+
+///////////////////////////////////////////////////////////////////////////////////////
+#define SERIAL_BUF_SZ 8
+static byte serialBuf[SERIAL_BUF_SZ];
+static int serialBufCurr = 0;
+static int serialBufWait = 0;
+typedef bool (*SERIAL_FN)(byte buf[], int curr, int wait);
+static SERIAL_FN serialFn;
+static void SetSerialBuf(int bufWait, SERIAL_FN fn)
+{
+    serialBufWait = bufWait;
+    serialBufCurr = 0;
+    serialFn = fn;
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////
 static void ProcessSerialCommand(EP_KpdMode *pkpdMode, char inchar)
 {
+    if(serialBufWait)
+    {
+        serialBuf[serialBufCurr++] = (byte)inchar;
+        if(serialBufCurr >= serialBufWait)
+        {
+            byte buf[SERIAL_BUF_SZ];
+            memcpy(buf, serialBuf, sizeof(serialBuf));
+            int bufCurr = serialBufCurr;
+            int bufWait = serialBufWait;
+            serialBufCurr = serialBufWait = 0;
+            serialFn(buf, bufCurr, bufWait);
+        }
+        return;
+    }
+
     switch(inchar)
     {
     case 'z':
-        // Dave Ek's format: set the encoder resolution
-        // (ignore command, just return proper code)
-        Serial.flush();
-        Serial.print("r");
+        // Dave Ek's format: set the encoder resolution for this session only
+        SetSerialBuf(4, SetSessionResolution);
+        break;
+
+    case 'x':
+        // set the persistent encoder resolution
+        SetSerialBuf(4, SetDefaultResolution);
         break;
 
     case 'h':

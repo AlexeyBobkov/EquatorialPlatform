@@ -24,6 +24,8 @@ struct Layout
     uint8_t uSessionId;
     double  dMotorStartAngle;
     double  dMotorEndAngle;
+    long    lDefEncResolutionAlt;
+    long    lDefEncResolutionAzm;
 };
 
 
@@ -197,3 +199,9 @@ bool EP_ReadMotoAngle(bool fStart, double *pAngle, double defaultVal)
     else
         return true;
 }
+
+///////////////////////////////////////////////////////////////////////////////////////
+long EP_ReadDefEncResolutionAlt()           {return GET_EEPROM(long, lDefEncResolutionAlt);}
+long EP_ReadDefEncResolutionAzm()           {return GET_EEPROM(long, lDefEncResolutionAzm);}
+void EP_WriteDefEncResolutionAlt(long val)  {WRITE_EEPROM(val, lDefEncResolutionAlt);}
+void EP_WriteDefEncResolutionAzm(long val)  {WRITE_EEPROM(val, lDefEncResolutionAzm);}

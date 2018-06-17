@@ -17,6 +17,9 @@ long EP_GetAltEncoderResolution();
 long EP_GetAzEncoderPosition();
 long EP_GetAltEncoderPosition();
 
+void EP_SetAzEncoderResolution(long lAz);
+void EP_SetAltEncoderResolution(long lAlt);
+
 uint8_t EP_GetEncoderErrorCount();
 
 #endif /* EP_ENCODERS_H_ */

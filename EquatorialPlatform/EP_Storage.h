@@ -40,5 +40,10 @@ bool EP_ReadSessionId(uint8_t *pSessionId);
 void EP_WriteMotoAngle(bool fStart, double angle);
 bool EP_ReadMotoAngle(bool fStart, double *pAngle, double defaultVal);
 
+///////////////////////////////////////////////////////////////////////////////////////
+long EP_ReadDefEncResolutionAlt();
+long EP_ReadDefEncResolutionAzm();
+void EP_WriteDefEncResolutionAlt(long val);
+void EP_WriteDefEncResolutionAzm(long val);
 
 #endif /* EP_STORAGE_H_ */
